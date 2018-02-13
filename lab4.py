@@ -276,6 +276,7 @@ def main ():
         if s == x:
             count += 1
     print (count / len(y_test))
+    
 
 
 if __name__ == "__main__":
