@@ -1,12 +1,8 @@
 __author__ = 'Trenton'
-#include
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 import pandas as pd
-import random
 import numpy as np
-from pprint import pprint
-import itertools
+import copy
 
 
 #part 1
@@ -125,7 +121,7 @@ def buildTree(x_train, y_train, columns):
     #Otherwise Begin
         #A ? The column that best classifies examples.
         idor = 0
-        bestEntropy = 1000
+        bestEntropy = 1000.00000
         column_to_remove = None
         while idor < 15:
             subToCheck = []
@@ -140,12 +136,23 @@ def buildTree(x_train, y_train, columns):
         #creat new train x train y and columns pass into its slef
             sub_setx1 = []
             sub_sety1 = []
-            sub_setc1 = []
             sub_setx0 = []
             sub_sety0 = []
-            sub_setc0 = []
-            thisNode.child1 = buildTree(sub_setx1,sub_sety1,sub_setc1)
-            thisNode.child0 = buildTree(sub_setx0,sub_sety0,sub_setc0)
+            for c, d in zip(x_train , y_train):
+                if c[column_to_remove] == 1:
+                    sub_setx1.append(c)
+                    sub_sety1.append(d)
+                else:
+                    sub_setx0.append(c)
+                    sub_sety0.append(d)
+            sub_setc = []
+            for a in columns:
+                if a != column_to_remove:
+                    sub_setc.append(a)
+
+            #populate  new trains with data
+            thisNode.child1 = buildTree(sub_setx1,sub_sety1,sub_setc)
+            thisNode.child0 = buildTree(sub_setx0,sub_sety0,sub_setc)
         #do this for the 1 side and the zero side, set as children
         #if one side does not have any values set child to None
     #End
@@ -155,12 +162,46 @@ def buildTree(x_train, y_train, columns):
 
 
 
+#pass in "root" first time
+def printTree(treeValue, myTree):
+    subTree = None
+    #base case this is a leaf
+    if myTree.is_leaf:
+        print(treeValue)
+        print(myTree.column)
+        return
+    #base case there is a left and right node
+    subTree = copy.deepcopy(myTree.child1)
+    printTree("1" , subTree)
+    subTree = copy.deepcopy(myTree.child0)
+    printTree("0" , subTree)
+    print(treeValue)
+    print(myTree.column)
+    return
 
-def printTree(myTree):
-    for x in myTree:
-        print(x)
-    for y in myTree[x]:
-        print(y,':',myTree[x][y])
+def predictID3(X_test, columns, tree, answers, child1Or0, isLeaf):
+    thisAnswer = None
+    if tree.is_leaf == True:
+        isLeaf = True
+    if isLeaf and (tree.is_leaf or child1Or0 == 1 or child1Or0 == 0):
+        return child1Or0
+    #loop tell leaf node if its a 1 tree anser is 1 else anser is 0
+    #fined assosiated x value
+    else:
+        idor = 0
+        location = 0
+        #fined the number of the first column
+        for x in columns:
+            if tree.column == x:
+                location = idor
+            idor += 1
+        if X_test[location] == 1:
+            predictID3(X_test, columns, tree, answers, 1, isLeaf)
+        else:
+            predictID3(X_test, columns, tree, answers, 0, isLeaf)
+
+
+
 
 
 
@@ -220,15 +261,21 @@ def main ():
     for x in VONP:
         VOTargets.append(x[16])
     VONP = np.delete(VONP, 16, 1)
-    #print(VONP)
+
 
     x = "{'n': 9, 'y': 7} {'n': 8, 'y': 8} {'n': 8, 'y': 8} {'n': 9, 'y': 7} {'n': 9, 'y': 7} {'n': 9, 'y': 7} {'n': 8, 'y': 8} {'n': 6, 'y': 10} {'n': 8, 'y': 8} {'n': 8, 'y': 8} {'n': 7, 'y': 9}  {'n': 8, 'y': 8} {'n': 9, 'y': 7} {'n': 8, 'y': 8} {'n': 8, 'y': 8}{'n': 7, 'y': 9} {'n': 7, 'y': 9}"
     #default = classes['y','y','y','y','y','y','y','n','y','y','n','y','y''y','y','n','n']
     X_train, X_test, y_train, y_test = train_test_split(VONP, VOTargets, test_size=0.3)
-
-    #print(len(X_train))
-
-
+    rootTree  = copy.deepcopy(buildTree(X_train,y_train,VO.columns))
+    printTree("root", rootTree)
+    #prints the % predicted correct
+    answers = []
+    count = 0
+    answers = predictID3(X_test, VO.columns, rootTree, answers, "", False)
+    for s , x in zip (answers, y_test):
+        if s == x:
+            count += 1
+    print (count / len(y_test))
 
 
 if __name__ == "__main__":
